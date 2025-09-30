@@ -5,6 +5,28 @@ import java.util.ArrayList;
 
 public class Chess {
 
+		private class Tile {
+			ReturnPiece.PieceFile file;
+			int rank;
+		}
+		
+		/**
+		 * The problem with en passant right now is that in order to decide if we need to create a square
+		 * where a pawn can capture by en passant, we need to know if the move is legal.
+		 * So, we will just create the en passant tile when we figure out the move is legal
+		 * or set the tile to null if there are no opportunities for en passant.
+		 * 
+		 * I should not assign en passant tile to be null where there is an illegal move,
+		 * as there may still be a valid en passant move from the previous turn
+		 * 
+		 * Therefore, I should only assign en passant move to null when a legal move is made
+		 * and the move made was not a pawn moving two tiles forward
+		 * 
+		 * Otherwise, when a legal move is made, I assign en passant tile to the tile
+		 * a pawn passed over to move two squares.
+		 */
+		private static Tile enPassantTile = null;
+		
         enum Player { white, black }
         private static ArrayList<ReturnPiece> pieces;
         static Player currentTurn = Player.white;
@@ -91,10 +113,8 @@ public class Chess {
 	    	rp.message = ReturnPlay.Message.ILLEGAL_MOVE;
 	    	return rp;
 	    }
+
 	    
-	    boolean selfCheck = checkForCheck() {
-	    	
-	    }
 	    
 	    if(validMove) {
 	    	//I would prefer to use charAt and a character, but the enum valueOf function takes Strings
@@ -318,24 +338,30 @@ public class Chess {
 	    int direction = isWhite ? 1 : -1;
 	    int startRank = isWhite ? 2 :  7;
 	    
+	    //Move one square case
 	    if (toFile == fromFile && toRank == fromRank + direction) {
 	        if (findPieceAt(toFile, toRank) == null) {
 	            return true;
 	        }
-	        return false; // blocked
+	        return false; 
 	    }
 	    
+	    //Move two squares case
 	    if(toFile == fromFile && toRank == 2 * direction + fromRank && fromRank == startRank) {
+	    	enPassantTile.file = pawn.pieceFile;
+	    	enPassantTile.rank = fromRank + direction;
 	    	if(findPieceAt(toFile, toRank) == null && findPieceAt(toFile, toRank - direction) == null) return true;
 	    	return false;	
 	    }
-	    
+	   
+	    //Capture case
 	    if (Math.abs(toFile - fromFile) == 1 && toRank == fromRank + direction) {
 	        ReturnPiece target = findPieceAt(toFile, toRank);
-	        if (target != null && target.pieceType.name().charAt(0) != pawn.pieceType.name().charAt(0)) {
-	            return true; // capture enemy
+	        if (target != null && target.pieceType.name().charAt(0) != pawn.pieceType.name().charAt(0) ||
+	        		(toRank == enPassantTile.rank && toFile == enPassantTile.file.name().charAt(0)) {
+	            return true;
 	        }
-	        return false; // no enemy to capture
+	        return false; 
 	    }
 	    
 	    try {
@@ -346,7 +372,7 @@ public class Chess {
 	    return false;
 	}
 	
-	private static checkForCheck() {
-		return false;
+	private static boolean isKingInCheck(ArrayList<ReturnPiece> pieces, boolean isWhiteKing) {
+			
 	}
 }
