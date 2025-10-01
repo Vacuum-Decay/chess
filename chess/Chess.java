@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 public class Chess {
 
-		private class Tile {
+		private static class Tile {
 			ReturnPiece.PieceFile file;
 			int rank;
 		}
@@ -25,7 +25,9 @@ public class Chess {
 		 * Otherwise, when a legal move is made, I assign en passant tile to the tile
 		 * a pawn passed over to move two squares.
 		 */
-		private static Tile enPassantTile = null;
+		private static Tile enPassantTile = new Tile();
+		private static boolean isBlackInCheck = false;
+		private static boolean isWhiteInCheck = false;
 		
         enum Player { white, black }
         private static ArrayList<ReturnPiece> pieces;
@@ -50,8 +52,13 @@ public class Chess {
 	    
 	    if(move.length() != 5) {
 	    	rp.message = ReturnPlay.Message.ILLEGAL_MOVE;
+	    	System.out.println(rp.message.toString());
 	    	return rp;
 	    }
+	    
+	    
+	    
+	    //Parses the input. getting the piece that is being moved.
 	    
 	    String sourceCoordinates = move.substring(0, 2);
 	    
@@ -72,49 +79,66 @@ public class Chess {
 	    	}
 	    }
 	    
-	    if(emptyTile) {
-	    	rp.message = ReturnPlay.Message.ILLEGAL_MOVE;
-	    	return rp;
-	    }
+	    //Checks if the user chose a tile without a piece
+//	    if(emptyTile) {
+//	    	rp.message = ReturnPlay.Message.ILLEGAL_MOVE;
+//	    	System.out.println(rp.message.toString());
+//	    	return rp;
+//	    }
 	    
 	    boolean validMove = didUserPickOwnPiece(pickedPiece);
 	    
-	    if(!validMove) {
+	    //Checks if the user picked a tile without a piece or with the opponents piece
+	    if(!validMove || emptyTile) {
 	    	System.out.println("You did not pick your own piece!");
 	    	rp.message = ReturnPlay.Message.ILLEGAL_MOVE;
+	    	System.out.println(rp.message.toString());
 	    	return rp;
 	    }
 	    
+	    
+	    
+	    //Checks if the move made is valid for the piece picked.
+	    char toFileChar = move.charAt(3);
+	    int  toRankInt  = Character.getNumericValue(move.charAt(4));_
 	    if(pickedPiece.pieceType == ReturnPiece.PieceType.WN || pickedPiece.pieceType == ReturnPiece.PieceType.BN ) {
-	    	validMove = checkKnightMove(pickedPiece, move.charAt(3), Character.getNumericValue(move.charAt(4)) );
+	    	validMove = checkKnightMove(pickedPiece, toFileChar, toRankInt);
 	    }
 	    
 	    if(pickedPiece.pieceType == ReturnPiece.PieceType.WB || pickedPiece.pieceType == ReturnPiece.PieceType.BB) {
-	    	validMove = checkBishopMove(pickedPiece, move.charAt(3), Character.getNumericValue(move.charAt(4)));
+	    	validMove = checkBishopMove(pickedPiece, toFileChar, toRankInt);
 	    }
 	    
 	    if(pickedPiece.pieceType == ReturnPiece.PieceType.WR || pickedPiece.pieceType == ReturnPiece.PieceType.BR) {
-	    	validMove = checkRookMove(pickedPiece, move.charAt(3), Character.getNumericValue(move.charAt(4)));
+	    	validMove = checkRookMove(pickedPiece, toFileChar, toRankInt);
 	    }
 	    
 	    if(pickedPiece.pieceType == ReturnPiece.PieceType.WK || pickedPiece.pieceType == ReturnPiece.PieceType.BK) {
-	    	validMove = checkKingMove(pickedPiece, move.charAt(3), Character.getNumericValue(move.charAt(4)));
+	    	validMove = checkKingMove(pickedPiece, toFileChar, toRankInt);
 	    }
 	    
 	    if(pickedPiece.pieceType == ReturnPiece.PieceType.WQ || pickedPiece.pieceType == ReturnPiece.PieceType.BQ) {
-	    	validMove = checkQueenMove(pickedPiece, move.charAt(3), Character.getNumericValue(move.charAt(4)));
+	    	validMove = checkQueenMove(pickedPiece, toFileChar, toRankInt);
 	    }
 	    
 	    if(pickedPiece.pieceType == ReturnPiece.PieceType.WP || pickedPiece.pieceType == ReturnPiece.PieceType.BP) {
-	    	validMove = checkPawnMove(pickedPiece, move.charAt(3), Character.getNumericValue(move.charAt(4)));
+	    	validMove = checkPawnMove(pickedPiece, toFileChar, toRankInt);
 	    }
+	    
+	    
 	    
 	    if(!validMove) {
 	    	rp.message = ReturnPlay.Message.ILLEGAL_MOVE;
+	    	System.out.println(rp.message.toString());
 	    	return rp;
 	    }
-
 	    
+	    if( (currentTurn == Player.white && isWhiteInCheck) ||
+	    	(currentTurn == Player.black && isBlackInCheck) ) {
+	    	
+	    	rp.message = ReturnPlay.Message.ILLEGAL_MOVE;
+	    	return rp;
+	    }
 	    
 	    if(validMove) {
 	    	//I would prefer to use charAt and a character, but the enum valueOf function takes Strings
@@ -124,9 +148,11 @@ public class Chess {
 	    	pickedPiece.pieceFile = ReturnPiece.PieceFile.valueOf(move.substring(3, 4));
 	    	pickedPiece.pieceRank = Integer.parseInt(move.substring(4, 5));
 	    	
-	    	
-	    	
 		    rp.message = null;
+		    if( (currentTurn == Player.white && isBlackInCheck) || 
+		    	(currentTurn == Player.black && isWhiteInCheck) ) {
+		    	rp.message = ReturnPlay.Message.CHECK;
+		    }
 		    currentTurn = (currentTurn == Player.white) ? Player.black : Player.white;
 	    } else {
 	    	rp.message = ReturnPlay.Message.ILLEGAL_MOVE;
@@ -143,8 +169,6 @@ public class Chess {
 	 */
 	public static void start() {
 		/* FILL IN THIS METHOD */
-		
-		String[][] board = PlayChess.makeBlankBoard();
 		pieces = new ArrayList<ReturnPiece>();
 		currentTurn = Player.white;
 		
@@ -316,7 +340,7 @@ public class Chess {
 	    
 	    ReturnPiece target = findPieceAt(toFile, toRank);
 	    if (target != null) {
-	        if (king.pieceType.name() == target.pieceType.name()) {
+	        if (king.pieceType.name().charAt(0) == target.pieceType.name().charAt(0)) {
 	            return false;
 	        }
 	    }
@@ -358,7 +382,7 @@ public class Chess {
 	    if (Math.abs(toFile - fromFile) == 1 && toRank == fromRank + direction) {
 	        ReturnPiece target = findPieceAt(toFile, toRank);
 	        if (target != null && target.pieceType.name().charAt(0) != pawn.pieceType.name().charAt(0) ||
-	        		(toRank == enPassantTile.rank && toFile == enPassantTile.file.name().charAt(0)) {
+	        		(toRank == enPassantTile.rank && toFile == enPassantTile.file.name().charAt(0)) ) {
 	            return true;
 	        }
 	        return false; 
@@ -371,8 +395,75 @@ public class Chess {
 	    }
 	    return false;
 	}
-	
-	private static boolean isKingInCheck(ArrayList<ReturnPiece> pieces, boolean isWhiteKing) {
+	/**
+	 * This function works by calling if a king is in check. It is up to the user to 
+	 * find the king of the correct color and pass that as a parameter.
+	 *  
+	 * @param pieces
+	 * @param king
+	 * @return boolean
+	 */
+	private static boolean isKingInCheck(ArrayList<ReturnPiece> pieces, Player playerColor) {
+		ReturnPiece whiteKing = new ReturnPiece();
+		for(ReturnPiece piece : pieces) if(piece.pieceType.equals(ReturnPiece.PieceType.WK)) whiteKing = piece;
+		ReturnPiece blackKing = new ReturnPiece();
+		for(ReturnPiece piece : pieces) if(piece.pieceType.equals(ReturnPiece.PieceType.BK)) blackKing = piece;
+		ReturnPiece king = (playerColor == Player.white) ? whiteKing : blackKing; 
+		for(ReturnPiece piece : pieces) {
+			switch(piece.pieceType) {
+				case WP: 
+			    	if(checkPawnMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+			        break;
+			    case WN:
+			    	if(checkKnightMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+			        break;
+			    case WB:
+			    	if(checkBishopMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+			    	break;
+			    case WR:
+			    	if(checkRookMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+			        break;
+			    case WQ:
+			    	if(checkQueenMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+			        break;
+			    case WK:
+			    	if(checkKingMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+			        break;
 			
+				default:
+					System.out.println("Code logic should not reach here");
+					break;
+			}
+		}
+		
+		if(king.pieceType == ReturnPiece.PieceType.WK) {
+			for( ReturnPiece piece : pieces) {
+				switch(piece.pieceType) {
+				    case BP: 
+				    	if(checkPawnMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+				        break;
+				    case BN: 
+				    	if(checkKnightMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+				        break;
+				    case BB:
+				    	if(checkBishopMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+				    	break;
+				    case BR:
+				    	if(checkRookMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+				        break;
+				    case BQ:
+				    	if(checkQueenMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+				        break;
+				    case BK:
+				    	if(checkKingMove(piece, king.pieceFile.name().charAt(0), king.pieceRank)) return true;
+				        break;
+					default:
+						System.out.println("Code logic should not reach here");
+						break;
+				}
+			}
+		}
+		
+		return false;
 	}
 }
